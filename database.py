@@ -6,14 +6,9 @@ import os
 
 #This function is responsible for creating the tables and directories 9/20
 def create(com):
-
-  #Checks for a semicolon
-  if(com[len(com)-1][-1] != ';'):
-    print("!Error: missing semicolon.")
+  com = semicolon(com)
+  if com == 'Error':
     return None
-  else:
-    com[len(com)-1] = com[len(com)-1][0:-1]
-
   #Checks if creating a database or a table 9/20
   if com[0] == "DATABASE":
     #Checks for a directory with the same name 9/20
@@ -39,14 +34,9 @@ def create(com):
       
 #This function is responsible for deleting the tables and directories 9/20
 def drop(com):
-
-  #Checks for a semicolon 9/20
-  if(com[len(com)-1][-1] != ';'):
-    print("!Error: missing semicolon.")
+  com = semicolon(com)
+  if com == 'Error':
     return None
-  else:
-    com[len(com)-1] = com[len(com)-1][0:-1]
-  
   #Checks if removing database or table 9/20
   if com[0] == "DATABASE":
     #Checks for a directory with the same name 9/20
@@ -68,14 +58,9 @@ def drop(com):
 
 #This function is responsible for changing the current directory 9/20
 def use(com, cwd):
-
-  #Checks for a semicolon 9/20
-  if(com[0][-1] != ';'):
-    print("!Error: missing semicolon.")
+  com = semicolon(com)
+  if com == 'Error':
     return None
-  else:
-    com[0] = com[0][0:-1]
-  
   #Checks if we are in the original directory or in a database 9/20
   if cwd == os.getcwd:
     try:
@@ -94,14 +79,9 @@ def use(com, cwd):
 
 #This function is responsible for allowing us to see a table 9/20
 def select(com):
-
-  #Checks for a semicolon 9/20
-  if(com[len(com)-1][-1] != ';'):
-    print("!Error: missing semicolon.")
+  com = semicolon(com)
+  if com == 'Error':
     return None
-  else:
-    com[len(com)-1] = com[len(com)-1][0:-1]
-  
   #Checks if arguments are valid 9/20
   if com[1] != "FROM":
     print("Error: invalid argument.")
@@ -117,13 +97,9 @@ def select(com):
 
 #This function is responsible for changing a table 9/20
 def alter(com):
-  #Checks for a semicolon 9/20
-  if(com[len(com)-1][-1] != ';'):
-    print("!Error: missing semicolon.")
+  com = semicolon(com)
+  if com == 'Error':
     return None
-  else:
-    com[len(com)-1] = com[len(com)-1][0:-1]
-
   if com[0] != "TABLE":
     print("Error: invalid argument.")
   else:
@@ -139,7 +115,15 @@ def alter(com):
       else:
         print("!Failed to use %s because it does not exist." %com[1])
 
-
+#Checks for semicolon 9/21
+def semicolon(command):
+  if(command[len(command)-1][-1] != ';'):
+    print("!Error: missing semicolon.")
+    return 'Error'
+  else:
+    command[len(command)-1] = command[len(command)-1][0:-1]
+    return command
+    
 
 def main():
   running = True
@@ -148,6 +132,9 @@ def main():
   while(running):
     command = input()
     command = command.split(" ")
+
+    
+
     if(command[len(command)-1][-1] == '\r'):
       command[len(command)-1] = command[len(command)-1][0:-1]
     if command[0] == ".EXIT":
