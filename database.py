@@ -78,23 +78,84 @@ def use(com, cwd):
       print("!Failed to use %s because it does not exist." %com[0])
 
 
-
+#This function is responsible for displaying a table 10/28
 def select(com):
-  com = semicolon(com)
-  if com == 'Error':
-    return None
-  #Checks if arguments are valid 9/20
-  if com[1].upper() != "FROM":
-    print("Error: invalid argument.")
-  else:
-    if com[0] == "*":
-      try:
+  if com[0] == "*":
+    com.pop(0)
+    com = semicolon(com)
+    if com == 'Error':
+      return None
+    isFrom = com.pop(0)
+    location = com.pop(0)
+    if isFrom.upper() != "FROM":
+      print("Error: invalid argument.")
+      return None
+    try:
+      #reads the table 9/20
+      with open(location, "r") as f:
+        print(f.read())
+    except:
+      print("!Failed to use %s because it does not exist." %location)
 
-        #reads the table 9/20
-        with open(com[2], "r") as f:
-          print(f.read())
-      except:
-        print("!Failed to use %s because it does not exist." %com[2])
+  #Added functionality to select to allow from specifications for selection 10/28
+  else:
+    cols = com.copy()
+    for i in range(len(cols)):
+      cols[i] = cols[i].replace(",", "")
+    com = takeInput()
+    if com == 'Error':
+      return None
+    isFrom = com.pop(0)
+    location = com.pop(0)
+    com = takeInput()
+    if com == 'Error':
+      return None
+    com = semicolon(com)
+    if com == 'Error':
+      return None
+    isWhere = com.pop(0)
+    colToCheck = com.pop(0)
+    sign = com.pop(0)
+    row = com.pop(0)
+    if isFrom.upper() != "FROM" or isWhere.upper() != 'WHERE':
+      print("Error: invalid argument.")
+      return None
+    if os.path.exists(location):
+      tableContents = open(location).read()
+
+      #Turns the table into a 2d array this allows for having columns and rows and easily modifying data
+      arr = toArray(tableContents)
+      colIndexesToDisplay = []
+      for col in cols:
+        colIndexesToDisplay.append(getColumn(arr, col))
+      if -1 in colIndexesToDisplay:
+        print("Select parameters incorrect.")
+        return None
+      colToCheckIndex = getColumn(arr, colToCheck)
+
+      rowIndexes  = getRows(arr, row, colToCheckIndex, sign)
+      temp = []
+      for i in range(len(rowIndexes)-1, -1, -1):
+        temp.append(arr.pop(rowIndexes[i]))
+      temp.append(arr[0])
+      temp.reverse()
+      output = []
+      for rowToDisplay in temp:
+        singleRowToDisplay = []
+        for colToDisplay in colIndexesToDisplay:
+          singleRowToDisplay.append(rowToDisplay[colToDisplay])
+        output.append(singleRowToDisplay)
+      output.append([""])
+      print(reformat(output))
+    else:
+      print("!Failed to use %s because it does not exist." %location)
+    
+    
+    
+    
+
+    
+      
 
 #This function is responsible for changing a table 9/20
 def alter(com):
@@ -150,6 +211,8 @@ def update(com):
 
   #Takes in the second line of commands
   com = takeInput()
+  if com == 'Error':
+    return None
   setter = com.pop(0)
   colToChange = com.pop(0)
   sign1 = com.pop(0)
@@ -188,7 +251,6 @@ def update(com):
 
       #Gets the indexes of all the rows that need to be changed 
       rowIndexes = getRows(arr, rowName, colIndexSearch, sign2)
-      arr.append([''])
 
       #Iterates through the rows and changes each column that needs to be changed
       for i in rowIndexes:
@@ -235,7 +297,6 @@ def delete(com):
 
       #Gets the indexes of all the rows that need to be changed 
       rowIndexes = getRows(arr, row, colIndex, sign)
-      arr.append([''])
 
       #Deletes all of the rows
       for i in range(len(rowIndexes)-1, -1, -1):
@@ -297,10 +358,8 @@ def getRows(arr, rowName, colIndex, sign):
   count = 1
   temp = arr.pop(0)
   arr.pop()
-  print(rowName)
   if sign == '=':
     for row in arr:
-      print(row)
       if row[colIndex]==rowName:
         rows.append(count)
       count+=1
@@ -314,10 +373,17 @@ def getRows(arr, rowName, colIndex, sign):
       if float(row[colIndex])>float(rowName):
         rows.append(count)
       count+=1
+  elif sign == '!=':
+    for row in arr:
+      if row[colIndex]!=rowName:
+        rows.append(count)
+      count+=1
+  
   else:
     print('Error: not a valid sign')
     return 'Error'
   arr.insert(0, temp)
+  arr.append([''])
   return rows
 
 
