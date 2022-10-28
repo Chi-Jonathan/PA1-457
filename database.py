@@ -1,6 +1,6 @@
 #Jonathan Chi
 #Created 9/20/2022
-#Last updated 10/28
+#Last updated 10/28/2022
 #CS 457 PA1
 
 import os
