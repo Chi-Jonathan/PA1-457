@@ -77,7 +77,8 @@ def use(com, cwd):
     except:
       print("!Failed to use %s because it does not exist." %com[0])
 
-#This function is responsible for allowing us to see a table 9/20
+
+
 def select(com):
   com = semicolon(com)
   if com == 'Error':
@@ -146,14 +147,18 @@ def update(com):
   
   #Parsing all of the commands input
   location = com.pop(0)
+
   #Takes in the second line of commands
   com = takeInput()
   setter = com.pop(0)
   colToChange = com.pop(0)
   sign1 = com.pop(0)
   nameToChange = com.pop(0).replace("'","")
+
   #takes in the third line and checks for a semicolon
   com = takeInput()
+  if com == 'Error':
+    return None
   com = semicolon(com)
   if com == 'Error':
     return None
@@ -204,9 +209,15 @@ def update(com):
 
 #This function is responsible for deleting data in a table 10/27
 def delete(com):
+
+  #Parsing all of the command inputs
   isFrom = com.pop(0)
   location = com.pop(0)
+
+  #Taking more inputs
   com = takeInput()
+  if com == 'Error':
+    return None
   com = semicolon(com)
   if com == 'Error':
     return None
@@ -214,10 +225,34 @@ def delete(com):
   colToSearch = com.pop(0)
   sign = com.pop(0)
   row = com.pop(0).replace("'","")
-  if isFrom.upper() == 'FROM' and isWhere == 'WHERE':
-    tableContents = open(location).read()
-    arr = toArray(tableContents)
-    colIndex = getColumn(arr, colToSearch)
+  if isFrom.upper() == 'FROM' and isWhere.upper() == 'WHERE':
+    if os.path.exists(location):
+      tableContents = open(location).read()
+
+      #Turns the table into a 2d array this allows for having columns and rows and easily modifying data
+      arr = toArray(tableContents)
+      colIndex = getColumn(arr, colToSearch)
+
+      #Gets the indexes of all the rows that need to be changed 
+      rowIndexes = getRows(arr, row, colIndex, sign)
+      arr.append([''])
+
+      #Deletes all of the rows
+      for i in range(len(rowIndexes)-1, -1, -1):
+        arr.pop(rowIndexes[i])
+
+      #Reformats the table's contents to a string
+      tableContents = reformat(arr)
+      with open(location, 'w') as f:
+        f.write(tableContents)
+      if len(rowIndexes)==1:
+        print("1 record deleted.")
+      else:
+        print("%d records deleted." %len(rowIndexes))
+    else:
+      print("!Failed to use %s because it does not exist." %location)
+  else:
+    print("Error: invalid argument(s).")
 
   
 
@@ -259,7 +294,8 @@ def reformat(arr):
 #Gets the rows that need to be updated in the table 10/26
 def getRows(arr, rowName, colIndex, sign):
   rows = []
-  count = 0
+  count = 1
+  temp = arr.pop(0)
   arr.pop()
   print(rowName)
   if sign == '=':
@@ -270,17 +306,18 @@ def getRows(arr, rowName, colIndex, sign):
       count+=1
   elif sign == '>':
     for row in arr:
-      if int(row[colIndex])>int(rowName):
+      if float(row[colIndex])>float(rowName):
         rows.append(count)
       count+=1
   elif sign == '<':
     for row in arr:
-      if int(row[colIndex])>int(rowName):
+      if float(row[colIndex])>float(rowName):
         rows.append(count)
       count+=1
   else:
     print('Error: not a valid sign')
     return 'Error'
+  arr.insert(0, temp)
   return rows
 
 
