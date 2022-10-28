@@ -1,5 +1,6 @@
 #Jonathan Chi
 #Created 9/20/2022
+#Last updated 10/28
 #CS 457 PA1
 
 import os
@@ -120,6 +121,8 @@ def select(com):
     if isFrom.upper() != "FROM" or isWhere.upper() != 'WHERE':
       print("Error: invalid argument.")
       return None
+
+    #Checks if file exists and reads in info
     if os.path.exists(location):
       tableContents = open(location).read()
 
