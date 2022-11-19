@@ -1,6 +1,6 @@
 #Jonathan Chi
 #Created 9/20/2022
-#Last updated 10/28/2022
+#Last updated 11/19/2022
 #CS 457 PA1
 
 import os
@@ -9,16 +9,17 @@ import os
 def create(com):
   com = semicolon(com)
   if com == 'Error':
+    print("!Error: missing semicolon.")
     return None
   #Checks if creating a database or a table 9/20
-  if com[0] == "DATABASE":
+  if com[0].upper() == "DATABASE":
     #Checks for a directory with the same name 9/20
     try:
         os.mkdir(com[1])
         print("Database %s created." %com[1])
     except:
       print("!Failed to create database %s because it already exists." %com[1])
-  elif com[0] == "TABLE":
+  elif com[0].upper() == "TABLE":
 
     #Checks for a table with same name 9/20
     if os.path.exists(com[1]): 
@@ -37,6 +38,7 @@ def create(com):
 def drop(com):
   com = semicolon(com)
   if com == 'Error':
+    print("!Error: missing semicolon.")
     return None
   #Checks if removing database or table 9/20
   if com[0] == "DATABASE":
@@ -61,6 +63,7 @@ def drop(com):
 def use(com, cwd):
   com = semicolon(com)
   if com == 'Error':
+    print("!Error: missing semicolon.")
     return None
   #Checks if we are in the original directory or in a database 9/20
   if cwd == os.getcwd:
@@ -82,21 +85,48 @@ def use(com, cwd):
 #This function is responsible for displaying a table 10/28
 def select(com):
   if com[0] == "*":
-    com.pop(0)
     com = semicolon(com)
     if com == 'Error':
-      return None
-    isFrom = com.pop(0)
-    location = com.pop(0)
-    if isFrom.upper() != "FROM":
-      print("Error: invalid argument.")
-      return None
-    try:
-      #reads the table 9/20
-      with open(location, "r") as f:
-        print(f.read())
-    except:
-      print("!Failed to use %s because it does not exist." %location)
+      com = takeInput()
+      if com == 'Error':
+        return None
+      
+      #Gets a dictionary of name to the table and the join types 11/16
+      nameTable, joinType = selectFrom(com)
+      if nameTable == -1:
+        return None
+      com = takeInput()
+      if com == 'Error':
+        return None
+      arg1 = com.pop(0)
+      com = semicolon(com)
+      if com == 'Error':
+        return None
+
+      #Checks for where vs on 11/16
+      if arg1 == 'where':
+        rowsToDisplay = selectWhere(com, nameTable)
+        print(reformat(rowsToDisplay))
+      elif arg1 == 'on':
+        rowsToDisplay = selectOn(com, nameTable, joinType)
+        print(reformat(rowsToDisplay))
+      else:
+        print("Error: invalid argument.")
+        return None
+
+    else:  
+      com.pop(0)
+      isFrom = com.pop(0)
+      location = com.pop(0)
+      if isFrom.upper() != "FROM":
+        print("Error: invalid argument.")
+        return None
+      try:
+        #reads the table 9/20
+        with open(location, "r") as f:
+          print(f.read())
+      except:
+        print("!Failed to use %s because it does not exist." %location)
 
   #Added functionality to select to allow from specifications for selection 10/28
   else:
@@ -113,6 +143,7 @@ def select(com):
       return None
     com = semicolon(com)
     if com == 'Error':
+      print("!Error: missing semicolon.")
       return None
     isWhere = com.pop(0)
     colToCheck = com.pop(0)
@@ -154,16 +185,140 @@ def select(com):
       print("!Failed to use %s because it does not exist." %location)
     
     
+#This function is responsible for from argruments in select 11/16
+def selectFrom(com):
+  isFrom = com.pop(0)
+  nameTable = {}
+  joinType = []
+  arg = ""
+  if isFrom.upper() != "FROM":
+    print("Error: invalid argument.")
+    return (-1, -1)
+  while com:
+    table = com.pop(0)
+    name = com.pop(0)
+    #checks for a comma
+    if name[-1] == ',':
+      name = name[:-1]
+    elif com:
+      while arg.upper() != 'JOIN':
+        arg = com.pop(0)
+        joinType.append(arg)
+    nameTable[name] = table
+  return (nameTable, joinType)
     
-    
+#This function is responsible for where argruments in select 11/16    
+def selectWhere(com, nameTable):
+  section1 = com.pop(0).split('.')
+  op = com.pop(0)
+  section2 = com.pop(0).split('.')
 
+  #Checks is the tables exist from the name 11/16
+  if os.path.exists(nameTable[section1[0]]):
+    t1 = open(nameTable[section1[0]]).read()
+  else:
+    print("!Failed to use %s because it does not exist." %nameTable[section1[0]])
+    return -1
+  if os.path.exists(nameTable[section2[0]]):
+    t2 = open(nameTable[section2[0]]).read()
+  else:
+    print("!Failed to use %s because it does not exist." %nameTable[section2[0]])
+    return -1
+  if op == '=':
+
+    #Gets the tables as 2d arrays 11/16
+    t1 = toArray(t1)
+    t2 = toArray(t2)
+    t1.pop()
+    t2.pop()
+    col1 = getColumn(t1, section1[1])
+    col2 = getColumn(t2, section2[1])
+    if col1 == -1 or col2 == -1:
+      print("Error: Not a column")
+      return -1
+    vars = t1.pop(0) + t2.pop(0)
+
+    #Finds where the keys match and combine the rows into one row then returns the inner joined table 11/16
+    rowsToDisplay = [vars]
+    for row1 in t1:
+      for row2 in t2:
+        if row1[col1] == row2[col2]:
+          rowsToDisplay.append(row1+row2)
+    rowsToDisplay.append([""])
+    return rowsToDisplay
+  else:
+    print("Error: invalid operation")
+    return -1
+
+
+
+#This function is responsible for on argruments in select 11/16
+def selectOn(com, nameTable, joinType):
+  section1 = com.pop(0).split('.')
+  op = com.pop(0)
+  section2 = com.pop(0).split('.')
+
+  #Checks is the tables exist from the name 11/16
+  if os.path.exists(nameTable[section1[0]]):
+    t1 = open(nameTable[section1[0]]).read()
+  else:
+    print("!Failed to use %s because it does not exist." %nameTable[section1[0]])
+    return -1
+  if os.path.exists(nameTable[section2[0]]):
+    t2 = open(nameTable[section2[0]]).read()
+  else:
+    print("!Failed to use %s because it does not exist." %nameTable[section2[0]])
+    return -1
+  if op == '=':
+
+    #Gets the tables as 2d arrays 11/16
+    t1 = toArray(t1)
+    t2 = toArray(t2)
+    t1.pop()
+    t2.pop()
+    col1 = getColumn(t1, section1[1])
+    col2 = getColumn(t2, section2[1])
+    if col1 == -1 or col2 == -1:
+      print("Error: Not a column")
+      return -1
+    vars = t1.pop(0) + t2.pop(0)
+    rowsToDisplay = [vars]
+
+    #Checks for inner join or outer join 11/16
+    if joinType[0].upper() == 'INNER' or joinType[1].upper() == 'INNER':
     
-      
+      #Finds where the keys match and combine the rows into one row then returns the inner joined table, same as where because inner join is the default 11/16
+      for row1 in t1:
+        for row2 in t2:
+          if row1[col1] == row2[col2]:
+            rowsToDisplay.append(row1+row2)
+      rowsToDisplay.append([""])
+    elif joinType[0].upper() == 'LEFT':
+      #Finds where the keys match and combine the rows into one row then adds in the additional rows for the outer join 11/19
+      inRowsToDisplay = []
+      emptyCols = [''] * len(t2[0])
+      for row1 in t1:
+        for row2 in t2:
+          if row1[col1] == row2[col2]:
+            rowsToDisplay.append(row1+row2)
+            inRowsToDisplay.append(row1)
+      for row1 in t1:
+        if row1 not in inRowsToDisplay:
+          rowsToDisplay.append(row1 + emptyCols)
+      rowsToDisplay.append([""])
+
+    #Returns the rows that are to be shown 11/19
+    return rowsToDisplay
+  else:
+    print("Error: invalid operation")
+    return -1
+
 
 #This function is responsible for changing a table 9/20
 def alter(com):
   com = semicolon(com)
   if com == 'Error':
+    print("!Error: missing semicolon.")
     return None
   if com[0] != "TABLE":
     print("Error: invalid argument.")
@@ -187,6 +342,7 @@ def alter(com):
 def insert(com):
   com = semicolon(com)
   if com == 'Error':
+    print("!Error: missing semicolon.")
     return None
   if com[0].upper() != 'INTO':
     print("Error: invalid argument.")
@@ -227,6 +383,7 @@ def update(com):
     return None
   com = semicolon(com)
   if com == 'Error':
+    print("!Error: missing semicolon.")
     return None
   where = com.pop(0)
   colToSearch = com.pop(0)
@@ -285,6 +442,7 @@ def delete(com):
     return None
   com = semicolon(com)
   if com == 'Error':
+    print("!Error: missing semicolon.")
     return None
   isWhere = com.pop(0)
   colToSearch = com.pop(0)
@@ -406,7 +564,6 @@ def getColumn(arr, argToChange):
 #Checks for semicolon 9/21
 def semicolon(command):
   if(command[len(command)-1][-1] != ';'):
-    print("!Error: missing semicolon.")
     return 'Error'
   else:
     command[len(command)-1] = command[len(command)-1][0:-1]

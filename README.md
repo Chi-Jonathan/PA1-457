@@ -26,3 +26,16 @@ To run use the command:
 python3 database.py < PA2_test.sql
 
 PA2_t.sql is the test file with the comments.
+
+
+PA3:
+The program for first gets the from arguments and assigns each name to a table using a dictionary and gets puts the join arguments into a list.
+It then checks the next line to see if it is where or on.
+If it is where then it goes to the selectWhere function and passes it the name table dictionary and the final line of commands. This function does a default inner join by first getting the tables into a 2d array form and getting the columns we want to compare. It then checks the table arrays row by row for each specified column and if they match it takes those two rows, combines them and appends them to a new 2d array, that being the rows to display. It then returns that 2d array of rows to display.
+If it is on then it goes to the selectOn function and passes it the name table dictionary, the final line of commands, and the join commands list. If it is an inner join then it does the exact same thing as the selectWhere function. If it is an outer join then it gets the tables as 2d arrays and the columns to compare. It then reads the join commands list to find what kind of join is needed. For the left outer join that is needed on this assignment it checks the table arrays row by row while comparing the specified columns and combines the matching ones, while having a separate list containing all of the rows that are going to be displayed for table 1 if it is a left outer join. It then appends the rest of the rows to the rows to display output from table 1 that didn't have a match and returns that 2d array of rows to display.
+The select function then takes the rows to display and reformats the array then prints it.
+
+To run use the command:
+python3 database.py < PA3_test.sql
+
+PA3_t.sql is the test file with the comments.
