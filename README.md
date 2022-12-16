@@ -39,3 +39,14 @@ To run use the command:
 python3 database.py < PA3_test.sql
 
 PA3_t.sql is the test file with the comments.
+
+PA4:
+I implemented the transactions by using a loop for the transactions in the locked file specifically. The locked table will be a copy of the original file with a name of .lock appended to the end of it. It will continue to loop until getting the commit command. Once commited it will delete the original table and replace it with the previously locked table. 
+When beginning the transaction the process that accesses the table first and makes the locked copy will be the one with the key to that table, that is implemented with just a boolean of hasLock. If the process is not the one to create the locked file hasLock will be false for them until the original process releases the lock by committing with the commit command.
+
+To run use the command:
+python3 database.py 
+
+You will need to input the commands manually into the databases because it depends on timing between the two processes to work.
+
+PA4_t.sql is the test file with the comments.

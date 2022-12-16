@@ -1,6 +1,6 @@
 #Jonathan Chi
 #Created 9/20/2022
-#Last updated 11/19/2022
+#Last updated 12/15/2022
 #CS 457 PA1
 
 import os
@@ -362,37 +362,28 @@ def insert(com):
           f.write(values + "\n")
         print('1 new record inserted.')
 
-#This function is responsible for updating data in a table 10/27
+#This function is responsible for updating data in a table 12/15
 def update(com):
-  
-  #Parsing all of the commands input
-  location = com.pop(0)
+  temp = com.copy()
+  temp = semicolon(temp)
 
-  #Takes in the second line of commands
-  com = takeInput()
-  if com == 'Error':
-    return None
-  setter = com.pop(0)
-  colToChange = com.pop(0)
-  sign1 = com.pop(0)
-  nameToChange = com.pop(0).replace("'","")
+  #Checks for semicolons if a semicolon is not detected continues to listen for commands
+  if temp != "Error":
+    semicolon(com)
 
-  #takes in the third line and checks for a semicolon
-  com = takeInput()
-  if com == 'Error':
-    return None
-  com = semicolon(com)
-  if com == 'Error':
-    print("!Error: missing semicolon.")
-    return None
-  where = com.pop(0)
-  colToSearch = com.pop(0)
-  sign2 = com.pop(0)
-  rowName = com.pop(0).replace("'","")
-  if sign1 != '=':
-    print("Error: need equals.")
-    return None
-  if setter.upper() == 'SET' and where.upper() == 'WHERE':
+    #Gets all of the arguments
+    location = com.pop(0)
+    setter = com.pop(0)
+    colToChange = com.pop(0)
+    sign1 = com.pop(0)
+    setTo = com.pop(0).replace("'","")
+    isWhere = com.pop(0)
+    colToSearch = com.pop(0)
+    sign2 = com.pop(0)
+    rowName = com.pop(0).replace("'","")
+    if setter.upper() != "SET" and sign1 != "=" and isWhere.upper() != "WHERE":
+      print("Error: invalid argument(s).")
+      return None
     if os.path.exists(location):
       tableContents = open(location).read()
 
@@ -414,7 +405,7 @@ def update(com):
 
       #Iterates through the rows and changes each column that needs to be changed
       for i in rowIndexes:
-        arr[i][colIndexChange] = nameToChange
+        arr[i][colIndexChange] = setTo
 
       #Reformats the table's contents to a string
       tableContents = reformat(arr)
@@ -426,8 +417,73 @@ def update(com):
         print("%d records modified." %len(rowIndexes))
     else:
       print("!Failed to use %s because it does not exist." %location)
-  else:
-    print("Error: invalid argument(s).")
+        
+
+
+  if temp == "Error":
+    #Parsing all of the commands input
+    location = com.pop(0)
+
+    #Takes in the second line of commands
+    com = takeInput()
+    if com == 'Error':
+      return None
+    setter = com.pop(0)
+    colToChange = com.pop(0)
+    sign1 = com.pop(0)
+    nameToChange = com.pop(0).replace("'","")
+
+    #takes in the third line and checks for a semicolon
+    com = takeInput()
+    if com == 'Error':
+      return None
+    com = semicolon(com)
+    if com == 'Error':
+      print("!Error: missing semicolon.")
+      return None
+    where = com.pop(0)
+    colToSearch = com.pop(0)
+    sign2 = com.pop(0)
+    rowName = com.pop(0).replace("'","")
+    if sign1 != '=':
+      print("Error: need equals.")
+      return None
+    if setter.upper() == 'SET' and where.upper() == 'WHERE':
+      if os.path.exists(location):
+        tableContents = open(location).read()
+
+        #Turns the table into a 2d array this allows for having columns and rows and easily modifying data
+        arr = toArray(tableContents)
+
+        #Finds the column to change's index
+        colIndexChange = getColumn(arr, colToChange)
+        if colIndexChange==-1:
+          print("Error: not a real column.")
+          return None
+        colIndexSearch = getColumn(arr, colToSearch)
+        if colIndexSearch==-1:
+          print("Error: not a real column.")
+          return None
+
+        #Gets the indexes of all the rows that need to be changed 
+        rowIndexes = getRows(arr, rowName, colIndexSearch, sign2)
+
+        #Iterates through the rows and changes each column that needs to be changed
+        for i in rowIndexes:
+          arr[i][colIndexChange] = nameToChange
+
+        #Reformats the table's contents to a string
+        tableContents = reformat(arr)
+        with open(location, 'w') as f:
+          f.write(tableContents)
+        if len(rowIndexes)==1:
+          print("1 record modified.")
+        else:
+          print("%d records modified." %len(rowIndexes))
+      else:
+        print("!Failed to use %s because it does not exist." %location)
+    else:
+      print("Error: invalid argument(s).")
 
 #This function is responsible for deleting data in a table 10/27
 def delete(com):
@@ -476,8 +532,68 @@ def delete(com):
   else:
     print("Error: invalid argument(s).")
 
-  
 
+#This function is responsible for beginning a transaction 12/15
+def begin(com):
+  com = semicolon(com)
+  if com == 'Error':
+    print("!Error: missing semicolon.")
+    return None
+  if com[0].upper() != "TRANSACTION":
+    print("Error: invalid argument.")
+    return None
+  print("Transaction starts.")
+  hasLock = False
+  fileName = ""
+
+  #This is inside the transaction state
+  while True:
+    com = takeInput()
+
+    if com == 'Error':
+      return None
+    #Continues transaction until commit
+    if com[0].upper() == "COMMIT;":
+      break
+    if com[0].upper() == ".EXIT;":
+      print("Leaving transaction.")
+      return None
+    if len(com) <= 1:
+      print("!Error: invalid argument(s)")
+      return None
+      
+    #Locks the file by appending .lock to the end of the file name and creating a copy
+    com[1] = com[1][0].upper() + com[1][1:]
+    if hasLock:
+      hasLock = True
+      com[1] = com[1]+".lock"
+    elif os.path.exists(com[1]) and not os.path.exists(com[1]+".lock"):
+      tableContents = open(com[1]).read()
+      with open(com[1]+".lock", 'w') as f:
+        f.write(tableContents)
+      fileName = com[1]
+      hasLock = True
+      com[1] = com[1]+".lock"
+    elif os.path.exists(com[1]+".lock") and not hasLock:
+      hasLock = False
+    else:
+      print("Error: invalid argument(s).")
+    if hasLock:
+      if com[0].upper() == "UPDATE":
+        com.pop(0)
+        update(com)
+      else:
+        print("Error: invalid argument(s).")
+    else:
+      print("Error: Table %s is locked!" %com[1])
+
+  #Commits the changes by replacing the original file
+  if hasLock:
+    os.remove(fileName)
+    os.rename(fileName+".lock", fileName)
+    print("Transaction committed.")
+  else:
+    print("Transaction abort.")
 
 
 
@@ -611,6 +727,9 @@ def main():
       elif command[0].upper() == "DELETE":
         command.pop(0)
         delete(command)
+      elif command[0].upper() == "BEGIN":
+        command.pop(0)
+        begin(command)
       else:
         print("Error: invalid command.")
 
